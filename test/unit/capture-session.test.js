@@ -99,7 +99,8 @@ describe('capture session', function() {
                         width: 1,
                         height: 1
                     },
-                    ignoreAreas: []
+                    ignoreAreas: [],
+                    pixelRatio: 1
                 });
 
                 this.browser.prepareScreenshot.returns(q({
@@ -107,7 +108,8 @@ describe('capture session', function() {
                     documentHeight: opts.documentSize.height,
                     captureArea: opts.captureArea,
                     viewportOffset: opts.viewportOffset,
-                    ignoreAreas: opts.ignoreAreas
+                    ignoreAreas: opts.ignoreAreas,
+                    pixelRatio: opts.pixelRatio
                 }));
 
                 var image = {
@@ -116,7 +118,12 @@ describe('capture session', function() {
                         height: opts.imageSize.height
                     }),
 
-                    crop: sinon.stub().returns(q()),
+                    crop: sinon.stub().returns(q({
+                        getSize: sinon.stub().returns({
+                            width: opts.captureArea.width,
+                            height: opts.captureArea.height
+                        })
+                    })),
                     clear: sinon.stub().returns(q())
                 };
                 this.browser.captureFullscreenImage.returns(q(image));
@@ -183,7 +190,8 @@ describe('capture session', function() {
                         imageSize: {width: 1000, height: 1000},
                         captureArea: opts.captureArea,
                         ignoreAreas: opts.ignoreAreas,
-                        viewportOffset: opts.viewportOffset
+                        viewportOffset: opts.viewportOffset,
+                        pixelRatio: opts.pixelRatio
                     });
                 };
             });
@@ -219,36 +227,91 @@ describe('capture session', function() {
                     });
             });
 
-            it('should fail if left boundary is outside of image', function() {
+            it('should return page screenshot if left boundary is outside of image', function() {
                 this.setupImageEqualToDocument({
                     captureArea: {left: 1001}
                 });
 
-                return assert.isRejected(this.performCapture(), StateError);
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 1000, height: 1000}
+                        );
+                    });
             });
 
-            it('should fail if right boundary is outside of image', function() {
+            it('should return page screenshot if right boundary is outside of image', function() {
                 this.setupImageEqualToDocument({
                     captureArea: {left: 900, width: 101}
                 });
 
-                return assert.isRejected(this.performCapture(), StateError);
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 1000, height: 1000}
+                        );
+                    });
             });
 
-            it('should fail if top boundary is outside of image', function() {
+            it('should return page screenshot if top boundary is outside of image', function() {
                 this.setupImageEqualToDocument({
                     captureArea: {top: 1001}
                 });
 
-                return assert.isRejected(this.performCapture(), StateError);
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 1000, height: 1000}
+                        );
+                    });
             });
 
-            it('should fail if bottom boundary is outside of image', function() {
+            it('should return page screenshot if bottom boundary is outside of image', function() {
                 this.setupImageEqualToDocument({
                     captureArea: {top: 900, height: 101}
                 });
 
-                return assert.isRejected(this.performCapture(), StateError);
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 1000, height: 1000}
+                        );
+                    });
+            });
+
+            it('should scale coords by pixel ratio if browser.usePixelRatio is true', function() {
+                var _this = this;
+                this.setupImageEqualToDocument({
+                    captureArea: {top: 1, left: 2, width: 3, height: 4},
+                    pixelRatio: 2
+                });
+
+                this.browser.usePixelRatio = true;
+
+                return this.performCapture()
+                    .then(function() {
+                        assert.calledWith(_this.image.crop, {top: 2, left: 4, width: 6, height: 8});
+                    });
+            });
+
+            it('should ignore pixel ratio when browser.usePixelRatio is false', function() {
+                var _this = this,
+                    captureArea = {top: 1, left: 2, width: 3, height: 4};
+                this.setupImageEqualToDocument({
+                    captureArea: captureArea,
+                    pixelRatio: 2
+                });
+
+                this.browser.usePixelRatio = false;
+
+                return this.performCapture()
+                    .then(function() {
+                        assert.calledWith(_this.image.crop, captureArea);
+                    });
             });
         });
 
@@ -303,22 +366,34 @@ describe('capture session', function() {
                     });
             });
 
-            it('should not fail if bottom border - offset is inside image', function() {
+            it('should capture image if bottom border - offset is inside image', function() {
                 this.setupDocumentHigherThenImage({
-                    captureArea: {top: 900, height: 101},
+                    captureArea: {top: 900, width: 20, height: 101},
                     viewportOffset: {top: 1}
                 });
 
-                return assert.isFulfilled(this.performCapture());
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 20, height: 101}
+                        );
+                    });
             });
 
-            it('should fail if bottom border - offset is outside of image', function() {
+            it('should return page screenshot if bottom border - offset is outside of image', function() {
                 this.setupDocumentHigherThenImage({
                     captureArea: {top: 900, height: 101 + 1},
                     viewportOffset: {top: 1}
                 });
 
-                return assert.isRejected(this.performCapture(), StateError);
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 1000, height: 1000}
+                        );
+                    });
             });
         });
 
@@ -373,22 +448,34 @@ describe('capture session', function() {
                     });
             });
 
-            it('should not fail if right border - offset is inside image', function() {
+            it('should capture image if right border - offset is inside image', function() {
                 this.setupDocumentWiderThenImage({
-                    captureArea: {left: 900, width: 101},
+                    captureArea: {left: 900, width: 101, height: 20},
                     viewportOffset: {left: 1}
                 });
 
-                return assert.isFulfilled(this.performCapture());
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 101, height: 20}
+                        );
+                    });
             });
 
-            it('should fail if right border - offset is outside of image', function() {
+            it('should return page screenshot if right border - offset is outside of image', function() {
                 this.setupDocumentWiderThenImage({
                     captureArea: {left: 900, width: 102},
                     viewportOffset: {left: 1}
                 });
 
-                return assert.isRejected(this.performCapture(), StateError);
+                return this.performCapture()
+                    .then(function(data) {
+                        assert.deepEqual(
+                            data.image.getSize(),
+                            {width: 1000, height: 1000}
+                        );
+                    });
             });
         });
     });

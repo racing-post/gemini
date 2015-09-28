@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.13.5 - 2015-09-09
+
+* Added the `vflat` reporter (@unlok)
+
+## 0.13.4 - 2015-08-30
+
+* Path to the plugin configuration fixed (@SevInf)
+
+* Sets support (@j0tunn)
+
+## 0.13.3 - 2015-08-27
+
+* mouseUp action: make element argument optional (@just-boris).
+
+* Print browserId and sessionId in critical error reports (@SevInf).
+
+* html report: load report images in lazy mode (@scf2k).
+
 ## 0.13.2 - 2015-08-17
 
 * Fix: correct handling of no-ref-image error (@j0tunn).
