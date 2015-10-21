@@ -55,6 +55,7 @@
   "scripts": {
     "test-unit": "istanbul test _mocha -- --recursive test/unit",
     "prepublish": "uglifyjs ./lib/browser/client-scripts/gemini.calibrate.js -m > ./lib/browser/client-scripts/gemini.calibrate.min.js",
+    "postinstall": "uglifyjs ./lib/browser/client-scripts/gemini.calibrate.js -m > ./lib/browser/client-scripts/gemini.calibrate.min.js",
     "test-func": "istanbul test _mocha test/functional",
     "test-browser": "istanbul test _mocha test/browser",
     "test": "istanbul test _mocha -- --recursive test/unit test/functional test/browser",
